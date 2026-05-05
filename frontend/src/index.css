@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+input, textarea, select {
+  font-size: max(16px, 1em) !important;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 min-h-screen;
+  }
+  input, textarea, select {
+    @apply outline-none;
+  }
+}
