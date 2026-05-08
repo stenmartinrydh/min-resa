@@ -25,9 +25,18 @@ export default function Dashboard() {
   const { user } = useAuth()
   const qc = useQueryClient()
 
-  const { data: destinations = [], isLoading } = useQuery({
+  const { data: rawDestinations = [], isLoading } = useQuery({
     queryKey: ['destinations'],
     queryFn: () => api.get('/api/destinations'),
+  })
+
+  const destinations = [...rawDestinations].sort((a, b) => {
+    const da = a.dates?.from ? new Date(a.dates.from) : null
+    const db_ = b.dates?.from ? new Date(b.dates.from) : null
+    if (!da && !db_) return 0
+    if (!da) return 1
+    if (!db_) return -1
+    return db_ - da
   })
 
   const deleteMutation = useMutation({
@@ -39,7 +48,7 @@ export default function Dashboard() {
     <div className="p-4 max-w-lg mx-auto">
       <div className="mb-6 mt-2">
         <h2 className="text-xl font-bold text-slate-900">Hej, {user?.displayName || 'resenär'}! 👋</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Dina resor</p>
+        <p className="text-sm text-slate-500 mt-0.5">Dina resmål</p>
       </div>
 
       {isLoading ? (
@@ -49,8 +58,8 @@ export default function Dashboard() {
       ) : destinations.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-5xl mb-4">🌍</div>
-          <p className="text-slate-600 font-medium">Inga resor ännu</p>
-          <p className="text-slate-400 text-sm mt-1">Tryck på + för att planera din första resa</p>
+          <p className="text-slate-600 font-medium">Inga resmål ännu</p>
+          <p className="text-slate-400 text-sm mt-1">Tryck på + för att planera ditt första resmål</p>
         </div>
       ) : (
         <div className="space-y-3">
