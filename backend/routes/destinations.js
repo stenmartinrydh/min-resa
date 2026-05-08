@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import { db } from '../lib/firebase.js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { Mistral } from '@mistralai/mistralai'
 
 export const destinationsRouter = Router()
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY })
+
+function arr(v) { return Array.isArray(v) ? v : v ? [v] : [] }
 
 function buildPrompt(destination, country, dates, prefs) {
   const mat = prefs.mat || {}
@@ -17,33 +19,67 @@ function buildPrompt(destination, country, dates, prefs) {
 
   const dateStr = dates?.from && dates?.to ? `${dates.from} – ${dates.to}` : 'okänt datum'
 
-  return `Du är en erfaren reseexpert med djup kunskap om ${destination}, ${country}.
-Skapa en detaljerad, personlig reseguide för en resa till ${destination} under ${dateStr}.
+  function prefRad(label, kat) {
+    const delar = []
+    Object.entries(kat).forEach(([k, v]) => {
+      if (k === 'fritext') return
+      const vals = arr(v)
+      if (vals.length) delar.push(`${k}: ${vals.join(', ')}`)
+    })
+    if (kat.fritext) delar.push(`övrigt: ${kat.fritext}`)
+    return delar.length ? `- ${label}: ${delar.join(' | ')}` : ''
+  }
+
+  const prefRader = [
+    prefRad('Mat & restauranger', mat),
+    prefRad('Dryck & uteliv', dryck),
+    prefRad('Utflykter & aktiviteter', utflykter),
+    prefRad('Stränder & vatten', strandar),
+    prefRad('Transport', transport),
+    prefRad('Shopping', shopping),
+    prefRad('Boende', boende),
+  ].filter(Boolean).join('\n') || '- Inga preferenser angivna'
+
+  return `Du är en erfaren reseexpert med djup lokalkännedom om ${destination}${country ? ', ' + country : ''}.
+Skapa en utförlig, personlig reseguide för en resa till ${destination} under ${dateStr}.
 
 Resenärens preferenser:
-- Mat & restauranger: kökstilar=${(mat.koksstilar || []).join(', ') || 'inga'}, budget=${mat.budget || 'medel'}, kosthänsyn=${(mat.kost || []).join(', ') || 'inga'}
-- Dryck & uteliv: typer=${(dryck.typer || []).join(', ') || 'inga'}, stämning=${dryck.stamning || 'avkopplande'}
-- Utflykter & aktiviteter: typer=${(utflykter.typer || []).join(', ') || 'inga'}, tempo=${utflykter.tempo || 'lugnt'}
-- Stränder & vatten: strandtyp=${(strandar.strandtyp || []).join(', ') || 'inga'}, aktiviteter=${(strandar.aktiviteter || []).join(', ') || 'inga'}
-- Transport: preferenser=${(transport.preferenser || []).join(', ') || 'inga'}
-- Shopping: typer=${(shopping.typer || []).join(', ') || 'inga'}, budget=${shopping.budget || 'medel'}
-- Boende: typ=${(boende.typ || []).join(', ') || 'inga'}, standard=${boende.standard || 'medel'}, önskemål=${(boende.onskemål || []).join(', ') || 'inga'}
+${prefRader}
+
+VIKTIGT: Prioritera "gömda pärlor" — platser och upplevelser som är välkända bland lokalborna men inte uppenbara för vanliga turister. Undvik de mest uppenbara turistfällorna om det finns bättre alternativ.
 
 Svara ENBART med ett JSON-objekt (ingen markdown, ingen förklaring) med exakt denna struktur:
 {
-  "sammanfattning": "2-3 meningar om destinationen anpassat till resenärens profil",
+  "sammanfattning": "4-5 meningar som beskriver destinationen djupgående, anpassat till resenärens profil och tidpunkt för resan",
   "sektioner": {
-    "mat": { "rubrik": "Mat & restauranger", "intro": "1-2 meningar", "tips": ["konkret tip 1", "konkret tip 2", "konkret tip 3", "konkret tip 4", "konkret tip 5"] },
-    "dryck": { "rubrik": "Dryck & uteliv", "intro": "1-2 meningar", "tips": ["tip1", "tip2", "tip3", "tip4"] },
-    "utflykter": { "rubrik": "Utflykter & aktiviteter", "intro": "1-2 meningar", "tips": ["tip1", "tip2", "tip3", "tip4", "tip5"] },
-    "strandar": { "rubrik": "Stränder & vatten", "intro": "1-2 meningar", "tips": ["tip1", "tip2", "tip3", "tip4"] },
-    "transport": { "rubrik": "Transport & förflyttning", "intro": "1-2 meningar", "tips": ["tip1", "tip2", "tip3"] },
-    "shopping": { "rubrik": "Shopping & marknader", "intro": "1-2 meningar", "tips": ["tip1", "tip2", "tip3", "tip4"] },
-    "boende": { "rubrik": "Boende & hotell", "intro": "1-2 meningar", "tips": ["tip1", "tip2", "tip3", "tip4"] }
+    "mat": {
+      "rubrik": "Mat & restauranger",
+      "intro": "3-4 meningar om matscenen i ${destination}, anpassat till preferenserna",
+      "tips": [
+        {
+          "namn": "Restaurangens namn",
+          "beskrivning": "3-4 meningar: vad som serveras, atmosfären, vad som gör stället unikt, varför det passar resenären",
+          "adress": "Gatuadress, ${destination}",
+          "lat": 0.0,
+          "lng": 0.0,
+          "dolda_parlan": "1-2 meningar om varför detta är en gömd pärla och inte en turistfälla",
+          "tags": ["tag1", "tag2", "tag3"],
+          "pris": "€/€€/€€€/€€€€",
+          "besokstips": "Praktiskt råd: när man ska gå, vad man ska beställa, om man behöver boka",
+          "webbplats": "https://www.exempel.com eller null om ingen officiell webbplats finns"
+        }
+      ]
+    },
+    "dryck": { "rubrik": "Dryck & uteliv", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": "", "tags": [], "pris": "", "besokstips": "", "webbplats": "" } ] },
+    "utflykter": { "rubrik": "Utflykter & aktiviteter", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": "", "tags": [], "pris": "", "besokstips": "", "webbplats": "" } ] },
+    "strandar": { "rubrik": "Stränder & vatten", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": "", "tags": [], "pris": "", "besokstips": "", "webbplats": "" } ] },
+    "transport": { "rubrik": "Transport & förflyttning", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": "", "tags": [], "pris": "", "besokstips": "", "webbplats": "" } ] },
+    "shopping": { "rubrik": "Shopping & marknader", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": "", "tags": [], "pris": "", "besokstips": "", "webbplats": "" } ] },
+    "boende": { "rubrik": "Boende & hotell", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": "", "tags": [], "pris": "", "besokstips": "", "webbplats": "" } ] }
   }
 }
 
-Skriv på svenska. Var konkret: nämn riktiga namn på restauranger, stränder, hotell, marknader och sevärdheter i ${destination}. Anpassa varje sektion till resenärens preferenser.`
+Inkludera 8-10 tips per sektion. Fyll i korrekta latitud/longitud-koordinater för varje plats. Skriv på svenska. Var konkret och personlig.`
 }
 
 destinationsRouter.get('/', async (req, res, next) => {
@@ -70,8 +106,11 @@ destinationsRouter.post('/generate', async (req, res, next) => {
     const { name, country, dates } = req.body
     if (!name) return res.status(400).json({ error: 'Destinationsnamn krävs' })
 
+    console.log(`[generate] Startar för "${name}" (uid: ${req.uid})`)
+
     const prefsDoc = await db.collection('users').doc(req.uid).collection('data').doc('preferences').get()
     const prefs = prefsDoc.exists ? prefsDoc.data() : {}
+    console.log(`[generate] Preferenser: ${prefsDoc.exists ? 'hittade' : 'inga sparade'}`)
 
     const destRef = db.collection('users').doc(req.uid).collection('destinations').doc()
     await destRef.set({
@@ -81,14 +120,17 @@ destinationsRouter.post('/generate', async (req, res, next) => {
       status: 'pending',
       createdAt: new Date(),
     })
+    console.log(`[generate] Dokument sparat (id: ${destRef.id}), anropar Gemini…`)
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(name, country || '', dates, prefs) }] }],
-      generationConfig: { responseMimeType: 'application/json' },
+    const result = await mistral.chat.complete({
+      model: 'mistral-small-latest',
+      messages: [{ role: 'user', content: buildPrompt(name, country || '', dates, prefs) }],
+      responseFormat: { type: 'json_object' },
     })
 
-    const raw = result.response.text()
+    const raw = result.choices[0].message.content
+    console.log(`[generate] Mistral svarade (${raw.length} tecken)`)
+
     let guide
     try {
       guide = JSON.parse(raw)
@@ -99,8 +141,15 @@ destinationsRouter.post('/generate', async (req, res, next) => {
     }
 
     await destRef.update({ status: 'generated', guide, generatedAt: new Date() })
+    console.log(`[generate] Klart — ${name} (id: ${destRef.id})`)
     res.json({ id: destRef.id })
   } catch (err) {
+    console.error(`[generate] Fel: ${err.message}`)
+    await destRef?.update({ status: 'error' }).catch(() => {})
+
+    if (err.status === 429 || err.message?.includes('429') || err.message?.includes('Too Many Requests')) {
+      return res.status(429).json({ error: 'AI-tjänsten är tillfälligt överbelastad. Vänta en stund och försök igen.' })
+    }
     next(err)
   }
 })
