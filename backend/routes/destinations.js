@@ -4,7 +4,7 @@ import { Mistral } from '@mistralai/mistralai'
 
 export const destinationsRouter = Router()
 
-const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY, timeoutMs: 120_000 })
+const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY, timeoutMs: 180_000 })
 
 function arr(v) { return Array.isArray(v) ? v : v ? [v] : [] }
 
@@ -79,7 +79,7 @@ Svara ENBART med ett JSON-objekt (ingen markdown, ingen förklaring) med exakt d
   }
 }
 
-Inkludera 8-10 tips per sektion. Fyll i korrekta latitud/longitud-koordinater för varje plats. Skriv på svenska. Var konkret och personlig.`
+Inkludera 6-8 tips per sektion. Fyll i korrekta latitud/longitud-koordinater för varje plats. Skriv på svenska. Var konkret och personlig.`
 }
 
 destinationsRouter.get('/', async (req, res, next) => {
