@@ -4,7 +4,7 @@ import { Mistral } from '@mistralai/mistralai'
 
 export const destinationsRouter = Router()
 
-const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY, timeout: 120_000 })
+const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY, timeoutMs: 120_000 })
 
 function arr(v) { return Array.isArray(v) ? v : v ? [v] : [] }
 
