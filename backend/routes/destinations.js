@@ -102,6 +102,7 @@ destinationsRouter.get('/:id', async (req, res, next) => {
 })
 
 destinationsRouter.post('/generate', async (req, res, next) => {
+  let destRef
   try {
     const { name, country, dates } = req.body
     if (!name) return res.status(400).json({ error: 'Destinationsnamn krävs' })
@@ -112,7 +113,7 @@ destinationsRouter.post('/generate', async (req, res, next) => {
     const prefs = prefsDoc.exists ? prefsDoc.data() : {}
     console.log(`[generate] Preferenser: ${prefsDoc.exists ? 'hittade' : 'inga sparade'}`)
 
-    const destRef = db.collection('users').doc(req.uid).collection('destinations').doc()
+    destRef = db.collection('users').doc(req.uid).collection('destinations').doc()
     await destRef.set({
       name,
       country: country || '',
