@@ -32,7 +32,7 @@ export default function NewDestination() {
   return (
     <div className="p-4 max-w-lg mx-auto">
       <div className="mb-6 mt-2">
-        <h2 className="text-xl font-bold text-slate-900">Ny resa</h2>
+        <h2 className="text-xl font-bold text-slate-900">Nytt resmål</h2>
         <p className="text-sm text-slate-500 mt-0.5">Ange din destination och AI genererar en personanpassad guide</p>
       </div>
 
@@ -105,7 +105,7 @@ export default function NewDestination() {
               Genererar guide…
             </>
           ) : (
-            '✨ Generera reseguide'
+            '✨ Generera resmålsguide'
           )}
         </button>
       </form>
