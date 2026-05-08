@@ -219,6 +219,7 @@ export default function DestinationGuide() {
   const { id } = useParams()
   const [aktivFlk, setAktivFlk] = useState('översikt')
   const [favoriter, setFavoriter] = useState([])
+  const [regeneratingKat, setRegeneratingKat] = useState(null)
   const userPos = useGeolocation()
   const qc = useQueryClient()
 
@@ -231,6 +232,27 @@ export default function DestinationGuide() {
   useEffect(() => {
     if (dest?.favoriter) setFavoriter(dest.favoriter)
   }, [dest?.favoriter])
+
+  async function deleteTip(katId, index) {
+    try {
+      await api.delete(`/api/destinations/${id}/tips/${katId}/${index}`)
+      qc.invalidateQueries({ queryKey: ['destination', id] })
+    } catch {
+      // ignorera
+    }
+  }
+
+  async function regenerateCategory(katId) {
+    setRegeneratingKat(katId)
+    try {
+      await api.post(`/api/destinations/${id}/sektioner/${katId}/regenerate`, {})
+      qc.invalidateQueries({ queryKey: ['destination', id] })
+    } catch {
+      // ignorera
+    } finally {
+      setRegeneratingKat(null)
+    }
+  }
 
   async function toggleFavorit(katId, index) {
     const key = `${katId}-${index}`
@@ -427,6 +449,9 @@ export default function DestinationGuide() {
                   userPos={userPos}
                   favoriter={favoriter}
                   onToggleFavorit={toggleFavorit}
+                  onDeleteTip={deleteTip}
+                  onRegenerate={() => regenerateCategory(s.id)}
+                  regenerating={regeneratingKat === s.id}
                 />
               </div>
             ))}

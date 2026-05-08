@@ -1,4 +1,4 @@
-import { MapPin, Navigation, Globe, Heart } from 'lucide-react'
+import { MapPin, Navigation, Globe, Heart, Trash2, RefreshCw } from 'lucide-react'
 
 const ICONS = {
   mat: '🍽️',
@@ -23,7 +23,7 @@ function formatDist(km) {
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
 
-function TipsKort({ tip, userPos, isFavorit, onToggleFavorit }) {
+function TipsKort({ tip, userPos, isFavorit, onToggleFavorit, onDeleteTip }) {
   const harKoords = tip.lat && tip.lng && tip.lat !== 0 && tip.lng !== 0
   const mapsUrl = harKoords
     ? `https://maps.google.com/?q=${tip.lat},${tip.lng}`
@@ -57,6 +57,15 @@ function TipsKort({ tip, userPos, isFavorit, onToggleFavorit }) {
               <Heart
                 className={`w-4 h-4 transition-colors ${isFavorit ? 'fill-red-500 text-red-500' : 'text-slate-300'}`}
               />
+            </button>
+          )}
+          {onDeleteTip && (
+            <button
+              onClick={onDeleteTip}
+              className="p-1 rounded-full hover:bg-red-50 transition-colors group"
+              aria-label="Ta bort tips"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-slate-200 group-hover:text-red-400 transition-colors" />
             </button>
           )}
         </div>
@@ -118,7 +127,7 @@ function TipsKort({ tip, userPos, isFavorit, onToggleFavorit }) {
   )
 }
 
-export default function CategorySection({ id, sektion, userPos, favoriter = [], onToggleFavorit, hideIntro = false }) {
+export default function CategorySection({ id, sektion, userPos, favoriter = [], onToggleFavorit, onDeleteTip, onRegenerate, regenerating, hideIntro = false }) {
   if (!sektion) return null
 
   const tips = sektion.tips || []
@@ -128,21 +137,40 @@ export default function CategorySection({ id, sektion, userPos, favoriter = [], 
       {!hideIntro && sektion.intro && (
         <p className="text-sm text-slate-600 leading-relaxed px-1">{sektion.intro}</p>
       )}
-      {tips.map((tip, i) => {
-        const tipObj = typeof tip === 'string' ? { namn: tip, beskrivning: '' } : tip
-        const katId = tipObj.katId || id
-        const index = tipObj.index !== undefined ? tipObj.index : i
-        const favKey = `${katId}-${index}`
-        return (
-          <TipsKort
-            key={i}
-            tip={tipObj}
-            userPos={userPos}
-            isFavorit={favoriter.includes(favKey)}
-            onToggleFavorit={onToggleFavorit ? () => onToggleFavorit(katId, index) : null}
-          />
-        )
-      })}
+      {onRegenerate && (
+        <div className="flex justify-end">
+          <button
+            onClick={onRegenerate}
+            disabled={regenerating}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 disabled:text-slate-300 transition-colors"
+          >
+            <RefreshCw className={`w-3 h-3 ${regenerating ? 'animate-spin' : ''}`} />
+            {regenerating ? 'Genererar nya tips…' : 'Generera om kategorin'}
+          </button>
+        </div>
+      )}
+      {regenerating ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map(k => <div key={k} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />)}
+        </div>
+      ) : (
+        tips.map((tip, i) => {
+          const tipObj = typeof tip === 'string' ? { namn: tip, beskrivning: '' } : tip
+          const katId = tipObj.katId || id
+          const index = tipObj.index !== undefined ? tipObj.index : i
+          const favKey = `${katId}-${index}`
+          return (
+            <TipsKort
+              key={i}
+              tip={tipObj}
+              userPos={userPos}
+              isFavorit={favoriter.includes(favKey)}
+              onToggleFavorit={onToggleFavorit ? () => onToggleFavorit(katId, index) : null}
+              onDeleteTip={onDeleteTip ? () => onDeleteTip(katId, index) : null}
+            />
+          )
+        })
+      )}
     </div>
   )
 }

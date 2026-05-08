@@ -8,6 +8,60 @@ const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY, timeoutMs: 18
 
 function arr(v) { return Array.isArray(v) ? v : v ? [v] : [] }
 
+const KAT_LABELS = {
+  mat: 'Mat & restauranger',
+  dryck: 'Dryck & uteliv',
+  utflykter: 'Utflykter & aktiviteter',
+  strandar: 'Stränder & vatten',
+  transport: 'Transport & förflyttning',
+  shopping: 'Shopping & marknader',
+  boende: 'Boende & hotell',
+}
+
+function buildCategoryPrompt(destination, country, dates, prefs, katId, excludedNames) {
+  const dateStr = dates?.from && dates?.to ? `${dates.from} – ${dates.to}` : 'okänt datum'
+  const label = KAT_LABELS[katId] || katId
+  const katPrefs = prefs[katId] || {}
+  const prefParts = []
+  Object.entries(katPrefs).forEach(([k, v]) => {
+    if (k === 'fritext') return
+    const vals = arr(v)
+    if (vals.length) prefParts.push(`${k}: ${vals.join(', ')}`)
+  })
+  if (katPrefs.fritext) prefParts.push(`övrigt: ${katPrefs.fritext}`)
+  const prefStr = prefParts.length ? prefParts.join(' | ') : 'inga specifika preferenser'
+  const excludeStr = excludedNames.length
+    ? `\nUndvik dessa platser (redan visade eller borttagna): ${excludedNames.join(', ')}`
+    : ''
+
+  return `Du är en erfaren reseexpert med djup lokalkännedom om ${destination}${country ? ', ' + country : ''}.
+Generera nya tips för kategorin "${label}" för en resa till ${destination} under ${dateStr}.
+
+Resenärens preferenser för ${label}: ${prefStr}${excludeStr}
+
+VIKTIGT: Prioritera "gömda pärlor" — platser välkända bland lokalborna men inte uppenbara för vanliga turister.
+
+Svara ENBART med ett JSON-objekt med exakt denna struktur:
+{
+  "tips": [
+    {
+      "namn": "Platsens namn",
+      "beskrivning": "3-4 meningar om stället och varför det passar resenären",
+      "adress": "Gatuadress, ${destination}",
+      "lat": 0.0,
+      "lng": 0.0,
+      "dolda_parlan": "1-2 meningar om varför detta är en gömd pärla",
+      "tags": ["tag1", "tag2"],
+      "pris": "€/€€/€€€/€€€€",
+      "besokstips": "Praktiskt råd: när, vad, om man behöver boka",
+      "webbplats": "Officiell URL om du är helt säker — annars null"
+    }
+  ]
+}
+
+Inkludera 6-8 tips. Fyll i korrekta latitud/longitud-koordinater. Skriv på svenska.`
+}
+
 function buildPrompt(destination, country, dates, prefs) {
   const mat = prefs.mat || {}
   const dryck = prefs.dryck || {}
@@ -198,6 +252,74 @@ Inkludera 5-8 konkreta, actionbara punkter per kategori. Anpassa till destinatio
     await db.collection('users').doc(req.uid).collection('destinations').doc(req.params.id).update({ checklist })
     res.json({ ok: true })
   } catch (err) {
+    next(err)
+  }
+})
+
+destinationsRouter.delete('/:id/tips/:katId/:index', async (req, res, next) => {
+  try {
+    const { id, katId, index } = req.params
+    const idx = parseInt(index)
+    const ref = db.collection('users').doc(req.uid).collection('destinations').doc(id)
+    const doc = await ref.get()
+    if (!doc.exists) return res.status(404).json({ error: 'Hittades inte' })
+
+    const data = doc.data()
+    const tips = data.guide?.sektioner?.[katId]?.tips || []
+    const deletedTip = tips[idx]
+    if (!deletedTip) return res.status(404).json({ error: 'Tips hittades inte' })
+
+    const newTips = tips.filter((_, i) => i !== idx)
+    const deletedNames = data.deletedTips?.[katId] || []
+
+    // Justera favorit-index: ta bort det raderade, flytta ned högre index
+    const favoriter = (data.favoriter || [])
+      .filter(f => f !== `${katId}-${idx}`)
+      .map(f => {
+        const [fKat, fIdx] = f.split('-')
+        if (fKat === katId && parseInt(fIdx) > idx) return `${fKat}-${parseInt(fIdx) - 1}`
+        return f
+      })
+
+    await ref.update({
+      [`guide.sektioner.${katId}.tips`]: newTips,
+      [`deletedTips.${katId}`]: [...deletedNames, deletedTip.namn],
+      favoriter,
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+destinationsRouter.post('/:id/sektioner/:katId/regenerate', async (req, res, next) => {
+  try {
+    const { id, katId } = req.params
+    const ref = db.collection('users').doc(req.uid).collection('destinations').doc(id)
+    const doc = await ref.get()
+    if (!doc.exists) return res.status(404).json({ error: 'Hittades inte' })
+
+    const { name, country, dates, deletedTips = {} } = doc.data()
+    const prefsDoc = await db.collection('users').doc(req.uid).collection('data').doc('preferences').get()
+    const prefs = prefsDoc.exists ? prefsDoc.data() : {}
+
+    const excludedNames = deletedTips[katId] || []
+    console.log(`[regenerate] Kategori "${katId}" för "${name}", exkluderar: [${excludedNames.join(', ')}]`)
+
+    const result = await mistral.chat.complete({
+      model: 'mistral-small-latest',
+      messages: [{ role: 'user', content: buildCategoryPrompt(name, country || '', dates, prefs, katId, excludedNames) }],
+      responseFormat: { type: 'json_object' },
+    })
+
+    const parsed = JSON.parse(result.choices[0].message.content)
+    const newTips = parsed.tips || []
+
+    await ref.update({ [`guide.sektioner.${katId}.tips`]: newTips })
+    console.log(`[regenerate] Klart — ${newTips.length} nya tips för "${katId}"`)
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(`[regenerate] Fel: ${err.message}`)
     next(err)
   }
 })
