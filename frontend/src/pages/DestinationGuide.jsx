@@ -452,6 +452,7 @@ export default function DestinationGuide() {
                   onDeleteTip={deleteTip}
                   onRegenerate={() => regenerateCategory(s.id)}
                   regenerating={regeneratingKat === s.id}
+                  onGoToMap={() => setAktivFlk('karta')}
                 />
               </div>
             ))}

@@ -23,7 +23,7 @@ function formatDist(km) {
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
 
-function TipsKort({ tip, userPos, isFavorit, onToggleFavorit, onDeleteTip }) {
+function TipsKort({ tip, userPos, isFavorit, onToggleFavorit, onDeleteTip, onGoToMap }) {
   const harKoords = tip.lat && tip.lng && tip.lat !== 0 && tip.lng !== 0
   const mapsUrl = harKoords
     ? `https://maps.google.com/?q=${tip.lat},${tip.lng}`
@@ -95,15 +95,27 @@ function TipsKort({ tip, userPos, isFavorit, onToggleFavorit, onDeleteTip }) {
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
         {tip.adress && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>{tip.adress}</span>
-          </a>
+          <div className="flex items-center gap-1">
+            {onGoToMap ? (
+              <button
+                onClick={onGoToMap}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{tip.adress}</span>
+              </button>
+            ) : (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{tip.adress}</span>
+              </a>
+            )}
+          </div>
         )}
         {tip.webbplats && tip.webbplats !== 'null' && (
           <a
@@ -127,7 +139,7 @@ function TipsKort({ tip, userPos, isFavorit, onToggleFavorit, onDeleteTip }) {
   )
 }
 
-export default function CategorySection({ id, sektion, userPos, favoriter = [], onToggleFavorit, onDeleteTip, onRegenerate, regenerating, hideIntro = false }) {
+export default function CategorySection({ id, sektion, userPos, favoriter = [], onToggleFavorit, onDeleteTip, onRegenerate, regenerating, onGoToMap, hideIntro = false }) {
   if (!sektion) return null
 
   const tips = sektion.tips || []
@@ -167,6 +179,7 @@ export default function CategorySection({ id, sektion, userPos, favoriter = [], 
               isFavorit={favoriter.includes(favKey)}
               onToggleFavorit={onToggleFavorit ? () => onToggleFavorit(katId, index) : null}
               onDeleteTip={onDeleteTip ? () => onDeleteTip(katId, index) : null}
+              onGoToMap={onGoToMap}
             />
           )
         })

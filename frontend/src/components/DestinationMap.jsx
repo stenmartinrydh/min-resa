@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 
 const KATEGORI_FARG = {
@@ -33,67 +32,73 @@ function pinIcon(katId) {
   })
 }
 
-function FitBounds({ markers }) {
-  const map = useMap()
-  useEffect(() => {
-    if (markers.length === 0) return
-    const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]))
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
-  }, [map, markers])
-  return null
-}
-
 export default function DestinationMap({ sektioner, onKategoriClick }) {
-  const markers = []
-  Object.entries(sektioner || {}).forEach(([katId, sek]) => {
-    ;(sek.tips || []).forEach((tip, i) => {
-      if (tip.lat && tip.lng && tip.lat !== 0 && tip.lng !== 0) {
-        markers.push({ ...tip, katId, index: i })
-      }
-    })
+  const containerRef = useRef(null)
+  const onKategoriClickRef = useRef(onKategoriClick)
+
+  useEffect(() => {
+    onKategoriClickRef.current = onKategoriClick
   })
 
-  const center = markers.length > 0
-    ? [markers[0].lat, markers[0].lng]
-    : [48, 15]
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const markers = []
+    Object.entries(sektioner || {}).forEach(([katId, sek]) => {
+      ;(sek.tips || []).forEach((tip, i) => {
+        if (tip.lat && tip.lng && tip.lat !== 0 && tip.lng !== 0) {
+          markers.push({ ...tip, katId, index: i })
+        }
+      })
+    })
+
+    const center = markers.length > 0 ? [markers[0].lat, markers[0].lng] : [48, 15]
+    const map = L.map(containerRef.current, { scrollWheelZoom: true }).setView(center, 12)
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map)
+
+    markers.forEach(m => {
+      const el = document.createElement('div')
+      el.style.minWidth = '160px'
+
+      const title = document.createElement('div')
+      title.style.cssText = 'font-weight:600;font-size:14px;margin-bottom:4px'
+      title.textContent = `${KATEGORI_EMOJI[m.katId] || ''} ${m.namn}`
+      el.appendChild(title)
+
+      if (m.pris) {
+        const pris = document.createElement('div')
+        pris.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:4px'
+        pris.textContent = m.pris
+        el.appendChild(pris)
+      }
+
+      const btn = document.createElement('button')
+      btn.style.cssText = `font-size:12px;color:${KATEGORI_FARG[m.katId] || '#3b82f6'};background:none;border:none;padding:0;cursor:pointer;text-decoration:underline`
+      btn.textContent = 'Visa i guide →'
+      btn.addEventListener('click', () => onKategoriClickRef.current(m.katId))
+      el.appendChild(btn)
+
+      L.marker([m.lat, m.lng], { icon: pinIcon(m.katId) })
+        .bindPopup(el)
+        .addTo(map)
+    })
+
+    if (markers.length > 0) {
+      const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]))
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
+    }
+
+    return () => { map.remove() }
+  }, [sektioner])
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm" style={{ height: '420px' }}>
-      <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        />
-        <FitBounds markers={markers} />
-        {markers.map((m, i) => (
-          <Marker key={i} position={[m.lat, m.lng]} icon={pinIcon(m.katId)}>
-            <Popup>
-              <div style={{ minWidth: '160px' }}>
-                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
-                  {KATEGORI_EMOJI[m.katId]} {m.namn}
-                </div>
-                {m.pris && (
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>{m.pris}</div>
-                )}
-                <button
-                  onClick={() => onKategoriClick(m.katId)}
-                  style={{
-                    fontSize: '12px',
-                    color: KATEGORI_FARG[m.katId] || '#3b82f6',
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  Visa i guide →
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+    <div
+      ref={containerRef}
+      className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm"
+      style={{ height: '420px' }}
+    />
   )
 }
