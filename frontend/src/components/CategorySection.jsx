@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { MapPin, Navigation, Globe } from 'lucide-react'
+import { MapPin, Navigation, Globe, Heart } from 'lucide-react'
 
 const ICONS = {
   mat: '🍽️',
@@ -24,7 +23,7 @@ function formatDist(km) {
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
 
-function TipsKort({ tip, userPos }) {
+function TipsKort({ tip, userPos, isFavorit, onToggleFavorit }) {
   const harKoords = tip.lat && tip.lng && tip.lat !== 0 && tip.lng !== 0
   const mapsUrl = harKoords
     ? `https://maps.google.com/?q=${tip.lat},${tip.lng}`
@@ -43,11 +42,24 @@ function TipsKort({ tip, userPos }) {
             <span className="text-xs text-slate-500 font-medium">{tip.pris}</span>
           )}
         </div>
-        {tip.dolda_parlan && (
-          <span className="flex-shrink-0 text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
-            💎 Gömd pärla
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {tip.dolda_parlan && (
+            <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
+              💎 Gömd pärla
+            </span>
+          )}
+          {onToggleFavorit && (
+            <button
+              onClick={onToggleFavorit}
+              className="p-1 rounded-full hover:bg-slate-100 transition-colors"
+              aria-label={isFavorit ? 'Ta bort favorit' : 'Lägg till favorit'}
+            >
+              <Heart
+                className={`w-4 h-4 transition-colors ${isFavorit ? 'fill-red-500 text-red-500' : 'text-slate-300'}`}
+              />
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-sm text-slate-700 leading-relaxed">{tip.beskrivning}</p>
@@ -106,17 +118,31 @@ function TipsKort({ tip, userPos }) {
   )
 }
 
-export default function CategorySection({ id, sektion, userPos }) {
+export default function CategorySection({ id, sektion, userPos, favoriter = [], onToggleFavorit, hideIntro = false }) {
   if (!sektion) return null
 
   const tips = sektion.tips || []
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600 leading-relaxed px-1">{sektion.intro}</p>
-      {tips.map((tip, i) => (
-        <TipsKort key={i} tip={typeof tip === 'string' ? { namn: tip, beskrivning: '' } : tip} userPos={userPos} />
-      ))}
+      {!hideIntro && sektion.intro && (
+        <p className="text-sm text-slate-600 leading-relaxed px-1">{sektion.intro}</p>
+      )}
+      {tips.map((tip, i) => {
+        const tipObj = typeof tip === 'string' ? { namn: tip, beskrivning: '' } : tip
+        const katId = tipObj.katId || id
+        const index = tipObj.index !== undefined ? tipObj.index : i
+        const favKey = `${katId}-${index}`
+        return (
+          <TipsKort
+            key={i}
+            tip={tipObj}
+            userPos={userPos}
+            isFavorit={favoriter.includes(favKey)}
+            onToggleFavorit={onToggleFavorit ? () => onToggleFavorit(katId, index) : null}
+          />
+        )
+      })}
     </div>
   )
 }

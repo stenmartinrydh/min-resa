@@ -154,6 +154,53 @@ destinationsRouter.post('/generate', async (req, res, next) => {
   }
 })
 
+destinationsRouter.put('/:id/favoriter', async (req, res, next) => {
+  try {
+    const { favoriter } = req.body
+    if (!Array.isArray(favoriter)) return res.status(400).json({ error: 'favoriter måste vara en array' })
+    await db.collection('users').doc(req.uid).collection('destinations').doc(req.params.id).update({ favoriter })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+destinationsRouter.post('/:id/checklist', async (req, res, next) => {
+  try {
+    const doc = await db.collection('users').doc(req.uid).collection('destinations').doc(req.params.id).get()
+    if (!doc.exists) return res.status(404).json({ error: 'Hittades inte' })
+    const { name, country } = doc.data()
+
+    const prompt = `Du är en erfaren reseexpert. Skapa en praktisk förberedelse-checklista för en resa till ${name}${country ? ', ' + country : ''}.
+
+Svara ENBART med ett JSON-objekt med exakt denna struktur:
+{
+  "kategorier": [
+    { "rubrik": "Dokument", "items": ["..."] },
+    { "rubrik": "Hälsa & säkerhet", "items": ["..."] },
+    { "rubrik": "Pengar & betalning", "items": ["..."] },
+    { "rubrik": "Kläder & packning", "items": ["..."] },
+    { "rubrik": "Boende & transport", "items": ["..."] },
+    { "rubrik": "Teknik & kommunikation", "items": ["..."] }
+  ]
+}
+
+Inkludera 5-8 konkreta, actionbara punkter per kategori. Anpassa till destinationen (t.ex. visumkrav, klimat, valuta). Skriv på svenska.`
+
+    const result = await mistral.chat.complete({
+      model: 'mistral-small-latest',
+      messages: [{ role: 'user', content: prompt }],
+      responseFormat: { type: 'json_object' },
+    })
+
+    const checklist = JSON.parse(result.choices[0].message.content)
+    await db.collection('users').doc(req.uid).collection('destinations').doc(req.params.id).update({ checklist })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 destinationsRouter.delete('/:id', async (req, res, next) => {
   try {
     await db.collection('users').doc(req.uid).collection('destinations').doc(req.params.id).delete()
