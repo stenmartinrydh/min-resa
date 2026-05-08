@@ -66,7 +66,7 @@ Svara ENBART med ett JSON-objekt (ingen markdown, ingen förklaring) med exakt d
           "tags": ["tag1", "tag2", "tag3"],
           "pris": "€/€€/€€€/€€€€",
           "besokstips": "Praktiskt råd: när man ska gå, vad man ska beställa, om man behöver boka",
-          "webbplats": "https://www.exempel.com eller null om ingen officiell webbplats finns"
+          "webbplats": "Officiell webbplats-URL OM du är helt säker på att URL:en är korrekt och aktiv — annars exakt null (inte en gissning)"
         }
       ]
     },

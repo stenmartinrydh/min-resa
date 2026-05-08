@@ -80,7 +80,7 @@ function WeatherWidget({ destName, dates, sektioner }) {
 
         const end = dates.to || dates.from
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dates.from}&end_date=${end}&forecast_days=16`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&start_date=${dates.from}&end_date=${end}`
         )
         const wData = await weatherRes.json()
         if (!cancelled && wData.daily) setWeather(wData.daily)
@@ -281,19 +281,18 @@ export default function DestinationGuide() {
 
   return (
     <div className="max-w-lg mx-auto">
-      <div className="px-4 pt-4 pb-2">
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4">
+      <div className="px-4 pt-3 pb-1 flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 flex-shrink-0">
           <ArrowLeft className="w-4 h-4" />
-          Tillbaka
         </Link>
-
-        <h2 className="text-2xl font-bold text-slate-900">{dest.name}</h2>
-        {dest.country && <p className="text-sm text-slate-500">{dest.country}</p>}
-        {dest.dates?.from && (
-          <p className="text-sm text-slate-400 mt-0.5">
-            {formatDate(dest.dates.from)} – {formatDate(dest.dates.to)}
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-slate-900 leading-tight truncate">{dest.name}</h2>
+          <p className="text-xs text-slate-400 truncate">
+            {dest.country}
+            {dest.country && dest.dates?.from && ' · '}
+            {dest.dates?.from && `${formatDate(dest.dates.from)} – ${formatDate(dest.dates.to)}`}
           </p>
-        )}
+        </div>
       </div>
 
       {dest.status === 'pending' && (
