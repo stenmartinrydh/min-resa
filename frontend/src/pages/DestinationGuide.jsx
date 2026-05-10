@@ -337,7 +337,7 @@ export default function DestinationGuide() {
         <>
           {/* Flikmeny */}
           <div className="sticky top-0 bg-white z-10 border-b border-slate-100 shadow-sm">
-            <div className="flex overflow-x-auto scrollbar-hide px-2 gap-1 py-2">
+            <div className="flex flex-wrap px-2 gap-1 py-2">
               {/* Översikt */}
               <button
                 onClick={() => setAktivFlk('översikt')}
