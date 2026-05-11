@@ -88,7 +88,7 @@ export default function DestinationMap({ sektioner, onKategoriClick }) {
 
     if (markers.length > 0) {
       const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]))
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
+      map.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 })
     }
 
     return () => { map.remove() }
@@ -98,7 +98,7 @@ export default function DestinationMap({ sektioner, onKategoriClick }) {
     <div
       ref={containerRef}
       className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm"
-      style={{ height: '420px' }}
+      style={{ height: 'min(70vh, 640px)', minHeight: '420px' }}
     />
   )
 }

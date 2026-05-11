@@ -301,19 +301,47 @@ export default function DestinationGuide() {
     return [{ ...tip, katId, index: parseInt(idx) }]
   })
 
+  function getSectionLabel(flk) {
+    if (flk === 'karta') return '🗺️ Karta'
+    if (flk === 'favoriter') return '❤️ Favoriter'
+    if (flk === 'checklista') return '✅ Förberedelser'
+    const sek = sektioner[flk]
+    const def = SEKTIONER.find(s => s.id === flk)
+    return sek ? `${def?.icon || ''} ${sek.rubrik}` : flk
+  }
+
+  const visarÖversikt = aktivFlk === 'översikt'
+
   return (
     <div className="max-w-lg mx-auto">
-      <div className="px-4 pt-3 pb-1 flex items-center gap-3">
-        <Link to="/" className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 flex-shrink-0">
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
+      <div className="px-4 pt-3 pb-2 flex items-center gap-3 border-b border-slate-100">
+        {visarÖversikt ? (
+          <Link to="/" className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+        ) : (
+          <button onClick={() => setAktivFlk('översikt')} className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
         <div className="min-w-0">
-          <h2 className="text-lg font-bold text-slate-900 leading-tight truncate">{dest.name}</h2>
-          <p className="text-xs text-slate-400 truncate">
-            {dest.country}
-            {dest.country && dest.dates?.from && ' · '}
-            {dest.dates?.from && `${formatDate(dest.dates.from)} – ${formatDate(dest.dates.to)}`}
-          </p>
+          {visarÖversikt ? (
+            <>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight truncate">{dest.name}</h2>
+              <p className="text-xs text-slate-400 truncate">
+                {dest.country}
+                {dest.country && dest.dates?.from && ' · '}
+                {dest.dates?.from && `${formatDate(dest.dates.from)} – ${formatDate(dest.dates.to)}`}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-slate-400 truncate">{dest.name}</p>
+              <h2 className="text-base font-bold text-slate-900 leading-tight truncate">
+                {getSectionLabel(aktivFlk)}
+              </h2>
+            </>
+          )}
         </div>
       </div>
 
@@ -334,160 +362,121 @@ export default function DestinationGuide() {
       )}
 
       {genererad && (
-        <>
-          {/* Flikmeny */}
-          <div className="sticky top-0 bg-white z-10 border-b border-slate-100 shadow-sm">
-            <div className="flex flex-wrap px-2 gap-1 py-2">
-              {/* Översikt */}
-              <button
-                onClick={() => setAktivFlk('översikt')}
-                className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                  aktivFlk === 'översikt' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <span className="text-base">🌍</span>
-                <span>Översikt</span>
-              </button>
+        <div className="p-4">
 
-              {/* Karta */}
-              <button
-                onClick={() => setAktivFlk('karta')}
-                className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                  aktivFlk === 'karta' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <span className="text-base">🗺️</span>
-                <span>Karta</span>
-              </button>
-
-              {/* Kategori-flikar */}
-              {SEKTIONER.filter(s => sektioner[s.id]).map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => setAktivFlk(s.id)}
-                  className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                    aktivFlk === s.id ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="text-base">{s.icon}</span>
-                  <span>{s.label}</span>
-                </button>
-              ))}
-
-              {/* Favoriter — visas bara om det finns minst en */}
-              {favoriter.length > 0 && (
-                <button
-                  onClick={() => setAktivFlk('favoriter')}
-                  className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                    aktivFlk === 'favoriter' ? 'bg-red-500 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="text-base">❤️</span>
-                  <span>Favoriter</span>
-                </button>
-              )}
-
-              {/* Förberedelser */}
-              <button
-                onClick={() => setAktivFlk('checklista')}
-                className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                  aktivFlk === 'checklista' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <span className="text-base">✅</span>
-                <span>Förberedelser</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Innehåll */}
-          <div className="p-4">
-
-            {/* Översikt */}
-            {aktivFlk === 'översikt' && (
-              <div className="space-y-4">
-                <div className="bg-blue-50 rounded-2xl px-4 py-4 text-sm text-blue-900 leading-relaxed">
-                  {guide.sammanfattning}
-                </div>
-
-                {/* Väderprognos */}
-                <WeatherWidget destName={dest.name} dates={dest.dates} sektioner={sektioner} />
-
-                <div className="grid grid-cols-2 gap-2">
-                  {SEKTIONER.filter(s => sektioner[s.id]).map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => setAktivFlk(s.id)}
-                      className="bg-white border border-slate-100 shadow-sm rounded-2xl p-3 flex items-center gap-2 text-left hover:border-blue-200 transition-colors"
-                    >
-                      <span className="text-xl">{s.icon}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 truncate">{sektioner[s.id]?.rubrik}</p>
-                        <p className="text-xs text-slate-400">{(sektioner[s.id]?.tips || []).length} tips</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+          {/* Översikt */}
+          {visarÖversikt && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 rounded-2xl px-4 py-4 text-sm text-blue-900 leading-relaxed">
+                {guide.sammanfattning}
               </div>
-            )}
 
-            {/* Karta */}
-            {aktivFlk === 'karta' && (
-              <DestinationMap
-                sektioner={sektioner}
-                onKategoriClick={katId => setAktivFlk(katId)}
-              />
-            )}
+              <WeatherWidget destName={dest.name} dates={dest.dates} sektioner={sektioner} />
 
-            {/* Kategori-flikar */}
-            {SEKTIONER.filter(s => aktivFlk === s.id && sektioner[s.id]).map(s => (
-              <div key={s.id}>
-                <h3 className="text-lg font-bold text-slate-900 mb-3">{sektioner[s.id].rubrik}</h3>
-                <CategorySection
-                  id={s.id}
-                  sektion={sektioner[s.id]}
-                  userPos={userPos}
-                  favoriter={favoriter}
-                  onToggleFavorit={toggleFavorit}
-                  onDeleteTip={deleteTip}
-                  onRegenerate={() => regenerateCategory(s.id)}
-                  regenerating={regeneratingKat === s.id}
-                  onGoToMap={() => setAktivFlk('karta')}
-                />
-              </div>
-            ))}
-
-            {/* Favoriter */}
-            {aktivFlk === 'favoriter' && (
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-3">Dina favoriter</h3>
-                {favoritTips.length === 0 ? (
-                  <p className="text-slate-400 text-sm">Inga favoriter markerade ännu.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {favoritTips.map((tip, i) => (
-                      <CategorySection
-                        key={i}
-                        id={tip.katId}
-                        sektion={{ tips: [tip] }}
-                        userPos={userPos}
-                        favoriter={favoriter}
-                        onToggleFavorit={toggleFavorit}
-                        hideIntro
-                      />
-                    ))}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setAktivFlk('karta')}
+                  className="col-span-2 bg-white border border-slate-100 shadow-sm rounded-2xl p-3 flex items-center gap-3 text-left hover:border-blue-200 transition-colors"
+                >
+                  <span className="text-xl">🗺️</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800">Karta</p>
+                    <p className="text-xs text-slate-400">Alla platser</p>
                   </div>
+                </button>
+
+                {SEKTIONER.filter(s => sektioner[s.id]).map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setAktivFlk(s.id)}
+                    className="bg-white border border-slate-100 shadow-sm rounded-2xl p-3 flex items-center gap-2 text-left hover:border-blue-200 transition-colors"
+                  >
+                    <span className="text-xl">{s.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{sektioner[s.id]?.rubrik}</p>
+                      <p className="text-xs text-slate-400">{(sektioner[s.id]?.tips || []).length} tips</p>
+                    </div>
+                  </button>
+                ))}
+
+                {favoriter.length > 0 && (
+                  <button
+                    onClick={() => setAktivFlk('favoriter')}
+                    className="bg-white border border-slate-100 shadow-sm rounded-2xl p-3 flex items-center gap-2 text-left hover:border-red-100 transition-colors"
+                  >
+                    <span className="text-xl">❤️</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800">Favoriter</p>
+                      <p className="text-xs text-slate-400">{favoriter.length} sparade</p>
+                    </div>
+                  </button>
                 )}
+
+                <button
+                  onClick={() => setAktivFlk('checklista')}
+                  className="bg-white border border-slate-100 shadow-sm rounded-2xl p-3 flex items-center gap-2 text-left hover:border-blue-200 transition-colors"
+                >
+                  <span className="text-xl">✅</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800">Förberedelser</p>
+                    <p className="text-xs text-slate-400">{dest.checklist ? 'Checklista klar' : 'Generera'}</p>
+                  </div>
+                </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Checklista */}
-            {aktivFlk === 'checklista' && (
-              <ChecklistaFlik destId={id} dest={dest} />
-            )}
+          {/* Karta */}
+          {aktivFlk === 'karta' && (
+            <DestinationMap
+              sektioner={sektioner}
+              onKategoriClick={katId => setAktivFlk(katId)}
+            />
+          )}
 
-          </div>
-        </>
+          {/* Kategorier */}
+          {SEKTIONER.filter(s => aktivFlk === s.id && sektioner[s.id]).map(s => (
+            <CategorySection
+              key={s.id}
+              id={s.id}
+              sektion={sektioner[s.id]}
+              userPos={userPos}
+              favoriter={favoriter}
+              onToggleFavorit={toggleFavorit}
+              onDeleteTip={deleteTip}
+              onRegenerate={() => regenerateCategory(s.id)}
+              regenerating={regeneratingKat === s.id}
+              onGoToMap={() => setAktivFlk('karta')}
+            />
+          ))}
+
+          {/* Favoriter */}
+          {aktivFlk === 'favoriter' && (
+            <div className="space-y-3">
+              {favoritTips.length === 0 ? (
+                <p className="text-slate-400 text-sm">Inga favoriter markerade ännu.</p>
+              ) : (
+                favoritTips.map((tip, i) => (
+                  <CategorySection
+                    key={i}
+                    id={tip.katId}
+                    sektion={{ tips: [tip] }}
+                    userPos={userPos}
+                    favoriter={favoriter}
+                    onToggleFavorit={toggleFavorit}
+                    hideIntro
+                  />
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Checklista */}
+          {aktivFlk === 'checklista' && (
+            <ChecklistaFlik destId={id} dest={dest} />
+          )}
+
+        </div>
       )}
     </div>
   )
