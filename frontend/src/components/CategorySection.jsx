@@ -179,7 +179,7 @@ export default function CategorySection({ id, sektion, userPos, favoriter = [], 
               isFavorit={favoriter.includes(favKey)}
               onToggleFavorit={onToggleFavorit ? () => onToggleFavorit(katId, index) : null}
               onDeleteTip={onDeleteTip ? () => onDeleteTip(katId, index) : null}
-              onGoToMap={onGoToMap}
+              onGoToMap={onGoToMap ? () => onGoToMap(katId, index) : null}
             />
           )
         })

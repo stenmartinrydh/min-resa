@@ -58,7 +58,8 @@ Svara ENBART med ett JSON-objekt med exakt denna struktur:
 }
 
 DOLDA PÄRLOR: Sätt "dolda_parlan" till null för de flesta tips. Fyll i det BARA för max 2 verkliga gömda pärlor — platser lokalbor älskar men turister sällan hittar. Skicka faktisk null (inte tom sträng) för övriga.
-Inkludera 6-8 tips. Fyll i korrekta latitud/longitud-koordinater. Skriv på svenska.`
+KOORDINATER — KRITISKT: Varje tips MÅSTE ha exakta lat/lng som pekar på platsens faktiska ingång eller mitt. Koordinaterna används för att placera en pin på kartan — 100 meter fel syns direkt. Ange aldrig 0.0 eller ungefärliga koordinater. Kontrollera att koordinaterna faktiskt stämmer med adressen.
+Inkludera 6-8 tips. Skriv på svenska.`
 }
 
 function buildPrompt(destination, country, dates, prefs) {
@@ -131,7 +132,8 @@ Svara ENBART med ett JSON-objekt (ingen markdown, ingen förklaring) med exakt d
 }
 
 DOLDA PÄRLOR: Sätt "dolda_parlan" till null för de flesta tips. Fyll i det BARA för max 2 verkliga gömda pärlor per kategori — platser lokalbor älskar men turister sällan hittar. Skicka faktisk null (inte tom sträng) för övriga.
-Inkludera 6-8 tips per sektion. Fyll i korrekta latitud/longitud-koordinater för varje plats. Skriv på svenska. Var konkret och personlig — visa tydligt hur varje tips kopplar till resenärens preferenser.`
+KOORDINATER — KRITISKT: Varje tips MÅSTE ha exakta lat/lng som pekar på platsens faktiska ingång eller mitt. Koordinaterna används för att placera en pin på kartan — 100 meter fel syns direkt. Ange aldrig 0.0 eller ungefärliga koordinater. Kontrollera att koordinaterna faktiskt stämmer med adressen.
+Inkludera 6-8 tips per sektion. Skriv på svenska. Var konkret och personlig — visa tydligt hur varje tips kopplar till resenärens preferenser.`
 }
 
 destinationsRouter.get('/', async (req, res, next) => {

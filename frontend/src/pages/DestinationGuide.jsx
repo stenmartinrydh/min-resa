@@ -220,6 +220,7 @@ export default function DestinationGuide() {
   const [aktivFlk, setAktivFlk] = useState('översikt')
   const [favoriter, setFavoriter] = useState([])
   const [regeneratingKat, setRegeneratingKat] = useState(null)
+  const [kartaFokus, setKartaFokus] = useState(null)
   const userPos = useGeolocation()
   const qc = useQueryClient()
 
@@ -375,7 +376,7 @@ export default function DestinationGuide() {
 
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setAktivFlk('karta')}
+                  onClick={() => { setKartaFokus(null); setAktivFlk('karta') }}
                   className="col-span-2 bg-white border border-slate-100 shadow-sm rounded-2xl p-3 flex items-center gap-3 text-left hover:border-blue-200 transition-colors"
                 >
                   <span className="text-xl">🗺️</span>
@@ -430,7 +431,10 @@ export default function DestinationGuide() {
           {aktivFlk === 'karta' && (
             <DestinationMap
               sektioner={sektioner}
-              onKategoriClick={katId => setAktivFlk(katId)}
+              onKategoriClick={katId => { setKartaFokus(null); setAktivFlk(katId) }}
+              focusKatId={kartaFokus?.katId}
+              focusTipIndex={kartaFokus?.tipIndex}
+              userPos={userPos}
             />
           )}
 
@@ -446,7 +450,7 @@ export default function DestinationGuide() {
               onDeleteTip={deleteTip}
               onRegenerate={() => regenerateCategory(s.id)}
               regenerating={regeneratingKat === s.id}
-              onGoToMap={() => setAktivFlk('karta')}
+              onGoToMap={(katId, index) => { setKartaFokus({ katId, tipIndex: index }); setAktivFlk('karta') }}
             />
           ))}
 
