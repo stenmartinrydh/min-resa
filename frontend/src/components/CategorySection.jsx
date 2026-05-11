@@ -1,4 +1,4 @@
-import { MapPin, Navigation, Globe, Heart, Trash2, RefreshCw } from 'lucide-react'
+import { MapPin, Navigation, Globe, Heart, Trash2, RefreshCw, Clock, CalendarCheck } from 'lucide-react'
 
 const ICONS = {
   mat: '🍽️',
@@ -87,10 +87,26 @@ function TipsKort({ tip, userPos, isFavorit, onToggleFavorit, onDeleteTip, onGoT
         </div>
       )}
 
-      {tip.besokstips && (
-        <p className="text-xs text-slate-500 italic leading-relaxed border-t border-slate-50 pt-2">
-          💡 {tip.besokstips}
-        </p>
+      {(tip.oppettider || tip.bokning_rekommenderas || tip.besokstips) && (
+        <div className="space-y-1.5 border-t border-slate-50 pt-2">
+          {tip.oppettider && (
+            <p className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              {tip.oppettider}
+            </p>
+          )}
+          {tip.bokning_rekommenderas && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+              <CalendarCheck className="w-3 h-3 flex-shrink-0" />
+              Bokning rekommenderas
+            </p>
+          )}
+          {tip.besokstips && (
+            <p className="text-xs text-slate-500 italic leading-relaxed">
+              💡 {tip.besokstips}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3 pt-1">

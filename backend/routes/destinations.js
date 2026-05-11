@@ -18,8 +18,11 @@ const KAT_LABELS = {
   boende: 'Boende & hotell',
 }
 
+const TAGS_LIST = '["naturvin","vegetariskt","veganskt","barnvänligt","utomhusservering","utsikt","historisk","bokning_krävs","kontantfritt","lokalt_ägd","halal","budget","lyxigt","natteliv","frukost","lunch","middag","fika","aktiv","avkopplande"]'
+
 function buildCategoryPrompt(destination, country, dates, prefs, katId, excludedNames) {
-  const dateStr = dates?.from && dates?.to ? `${dates.from} – ${dates.to}` : 'okänt datum'
+  const dateStr = dates?.from && dates?.to ? `${dates.from} – ${dates.to}` : null
+  const countryStr = country ? `, ${country}` : ''
   const label = KAT_LABELS[katId] || katId
   const katPrefs = prefs[katId] || {}
   const prefParts = []
@@ -34,32 +37,40 @@ function buildCategoryPrompt(destination, country, dates, prefs, katId, excluded
     ? `\nUndvik dessa platser (redan visade eller borttagna): ${excludedNames.join(', ')}`
     : ''
 
-  return `Du är en erfaren reseexpert med djup lokalkännedom om ${destination}${country ? ', ' + country : ''}.
-Generera nya tips för kategorin "${label}" för en resa till ${destination} under ${dateStr}.
+  return `Du är en lokal invånare i ${destination}${countryStr} — bosatt där i många år och skriver reseguider på svenska för en oberoende reseblogg. Du föraktar turistfällor och vet precis vilka ställen som faktiskt håller vad de lovar.
+
+Generera nya tips för kategorin "${label}" för en resa till ${destination}${countryStr}${dateStr ? ` under ${dateStr} — anpassa efter säsongen: öppettider, råvaror i säsong, lokala evenemang, klimat` : ''}.
 
 Resenärens preferenser för ${label}: ${prefStr}${excludeStr}
 
-Svara ENBART med ett JSON-objekt med exakt denna struktur:
+DEFINITION "lokalt & icke-turistigt": meny på lokalt språk, majoriteten av gästerna är lokalbor på vardagar, inga reklamskyltar utanför på engelska, inte bland de tre översta TripAdvisor-träffarna.
+
+Svara ENBART med ett giltigt JSON-objekt (dubbla citattecken, inga trailing commas, inga kommentarer) med exakt denna struktur:
 {
   "tips": [
     {
       "namn": "Platsens namn",
       "beskrivning": "3-4 meningar om stället och varför det passar resenären baserat på deras preferenser",
       "adress": "Gatuadress, ${destination}",
-      "lat": 0.0,
-      "lng": 0.0,
+      "lat": null,
+      "lng": null,
       "dolda_parlan": null,
       "tags": ["tag1", "tag2"],
-      "pris": "€/€€/€€€/€€€€",
+      "pris": "€€",
       "besokstips": "Praktiskt råd: när, vad, om man behöver boka",
-      "webbplats": "Officiell URL om du är helt säker — annars null"
+      "webbplats": null,
+      "oppettider": "Mån-fre 09:00-18:00 eller null om okänt",
+      "bokning_rekommenderas": false
     }
   ]
 }
 
-DOLDA PÄRLOR: Sätt "dolda_parlan" till null för de flesta tips. Fyll i det BARA för max 2 verkliga gömda pärlor — platser lokalbor älskar men turister sällan hittar. Skicka faktisk null (inte tom sträng) för övriga.
-KOORDINATER — KRITISKT: Varje tips MÅSTE ha exakta lat/lng som pekar på platsens faktiska ingång eller mitt. Koordinaterna används för att placera en pin på kartan — 100 meter fel syns direkt. Ange aldrig 0.0 eller ungefärliga koordinater. Kontrollera att koordinaterna faktiskt stämmer med adressen.
-Inkludera 6-8 tips. Skriv på svenska.`
+DOLDA PÄRLOR: "dolda_parlan" är null för alla tips utom max 2 verkliga gömda pärlor per kategori — platser lokalbor älskar men turister sällan hittar. null (inte tom sträng) för övriga.
+KOORDINATER: Om du inte med hög säkerhet vet exakta koordinater, sätt lat och lng till null. Det är ALLTID bättre att returnera null än att gissa — en felaktig pin är värre än ingen pin. Ange aldrig 0.0.
+TAGS: välj max 4 relevanta taggar från listan: ${TAGS_LIST}
+WEBBPLATS: officiell hemsida eller Instagram-handle (@...). INTE TripAdvisor, Google Maps eller bokningssajter. null om osäker.
+PRIS: använd exakt ett av dessa värden: "€", "€€", "€€€", "€€€€" eller null om inte relevant.
+Inkludera 4-8 tips beroende på vad destinationen faktiskt erbjuder — tvinga inte fram tips som inte håller måttet. Skriv på svenska.`
 }
 
 function buildPrompt(destination, country, dates, prefs) {
@@ -71,7 +82,8 @@ function buildPrompt(destination, country, dates, prefs) {
   const shopping = prefs.shopping || {}
   const boende = prefs.boende || {}
 
-  const dateStr = dates?.from && dates?.to ? `${dates.from} – ${dates.to}` : 'okänt datum'
+  const dateStr = dates?.from && dates?.to ? `${dates.from} – ${dates.to}` : null
+  const countryStr = country ? `, ${country}` : ''
 
   function prefRad(label, kat) {
     const delar = []
@@ -94,15 +106,35 @@ function buildPrompt(destination, country, dates, prefs) {
     prefRad('Boende', boende),
   ].filter(Boolean).join('\n') || '- Inga preferenser angivna'
 
-  return `Du är en erfaren reseexpert med djup lokalkännedom om ${destination}${country ? ', ' + country : ''}.
-Skapa en utförlig, personlig reseguide för en resa till ${destination} under ${dateStr}.
+  return `Du är en lokal invånare i ${destination}${countryStr} — bosatt där i många år och skriver reseguider på svenska för en oberoende reseblogg. Du föraktar turistfällor och vet precis vilka ställen som faktiskt håller vad de lovar.
+
+Destination: ${destination}${countryStr}
+${dateStr ? `Resedatum: ${dateStr} — anpassa tipsen efter säsongen: vilka platser är öppna, vad som är i säsong (råvaror, evenemang), klimatanpassningar och eventuella lokala helgdagar under perioden.` : ''}
 
 Resenärens preferenser:
 ${prefRader}
 
-Svara ENBART med ett JSON-objekt (ingen markdown, ingen förklaring) med exakt denna struktur:
+DEFINITION "lokalt & icke-turistigt": meny på lokalt språk, majoriteten av gästerna är lokalbor på vardagar, inga reklamskyltar utanför på engelska, inte bland de tre översta TripAdvisor-träffarna.
+
+EXEMPEL på ett välformat tips:
 {
-  "sammanfattning": "4-5 meningar som beskriver destinationen djupgående, anpassat till resenärens profil och tidpunkt för resan",
+  "namn": "Osteria del Vicolo",
+  "beskrivning": "Familjeägt sedan 1968, menyn skrivs på tavlan varje morgon efter vad som kommit in från marknaden. Stämningen är bullrig och vardaglig — lokalborna ockuperar varje bord vid lunch. Perfekt för dig som vill äta äkta lokal mat utan turistpris.",
+  "adress": "Via del Mercato 14, ${destination}",
+  "lat": null,
+  "lng": null,
+  "dolda_parlan": "Stammarna ber alltid om dagsrätten — den syns inte på tavlan men är alltid det bästa på bordet.",
+  "tags": ["lokalt_ägd", "lunch", "budget"],
+  "pris": "€€",
+  "besokstips": "Kom 12:00–13:00, det fylls snabbt. Ingen bokning — dyk bara upp.",
+  "webbplats": null,
+  "oppettider": "Mån–lör 12:00–15:00, 19:00–22:30. Stängt söndag.",
+  "bokning_rekommenderas": false
+}
+
+Svara ENBART med ett giltigt JSON-objekt (dubbla citattecken, inga trailing commas, inga kommentarer) med exakt denna struktur:
+{
+  "sammanfattning": "4-5 meningar om destinationen, anpassat till resenärens profil och resans tidpunkt",
   "sektioner": {
     "mat": {
       "rubrik": "Mat & restauranger",
@@ -110,30 +142,36 @@ Svara ENBART med ett JSON-objekt (ingen markdown, ingen förklaring) med exakt d
       "tips": [
         {
           "namn": "Restaurangens namn",
-          "beskrivning": "3-4 meningar: vad som serveras, atmosfären, vad som gör stället unikt, och specifikt varför det matchar resenärens preferenser",
+          "beskrivning": "3-4 meningar: vad som serveras, atmosfären, vad som gör stället unikt och varför det matchar resenärens preferenser",
           "adress": "Gatuadress, ${destination}",
-          "lat": 0.0,
-          "lng": 0.0,
+          "lat": null,
+          "lng": null,
           "dolda_parlan": null,
-          "tags": ["tag1", "tag2", "tag3"],
-          "pris": "€/€€/€€€/€€€€",
-          "besokstips": "Praktiskt råd: när man ska gå, vad man ska beställa, om man behöver boka",
-          "webbplats": "Officiell webbplats-URL OM du är helt säker på att URL:en är korrekt och aktiv — annars exakt null (inte en gissning)"
+          "tags": ["tag1", "tag2"],
+          "pris": "€€",
+          "besokstips": "Praktiskt råd: bästa tid, vad man ska beställa, om bokning krävs",
+          "webbplats": null,
+          "oppettider": "Mån-fre 12:00-22:00 eller null om okänt",
+          "bokning_rekommenderas": false
         }
       ]
     },
-    "dryck": { "rubrik": "Dryck & uteliv", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": null, "tags": [], "pris": "", "besokstips": "", "webbplats": null } ] },
-    "utflykter": { "rubrik": "Utflykter & aktiviteter", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": null, "tags": [], "pris": "", "besokstips": "", "webbplats": null } ] },
-    "strandar": { "rubrik": "Stränder & vatten", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": null, "tags": [], "pris": "", "besokstips": "", "webbplats": null } ] },
-    "transport": { "rubrik": "Transport & förflyttning", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": null, "tags": [], "pris": "", "besokstips": "", "webbplats": null } ] },
-    "shopping": { "rubrik": "Shopping & marknader", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": null, "tags": [], "pris": "", "besokstips": "", "webbplats": null } ] },
-    "boende": { "rubrik": "Boende & hotell", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": 0.0, "lng": 0.0, "dolda_parlan": null, "tags": [], "pris": "", "besokstips": "", "webbplats": null } ] }
+    "dryck": { "rubrik": "Dryck & uteliv", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": null, "lng": null, "dolda_parlan": null, "tags": [], "pris": "€€", "besokstips": "", "webbplats": null, "oppettider": null, "bokning_rekommenderas": false } ] },
+    "utflykter": { "rubrik": "Utflykter & aktiviteter", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": null, "lng": null, "dolda_parlan": null, "tags": [], "pris": "€€", "besokstips": "", "webbplats": null, "oppettider": null, "bokning_rekommenderas": false } ] },
+    "strandar": { "rubrik": "Stränder & vatten", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": null, "lng": null, "dolda_parlan": null, "tags": [], "pris": "€€", "besokstips": "", "webbplats": null, "oppettider": null, "bokning_rekommenderas": false } ] },
+    "transport": { "rubrik": "Transport & förflyttning", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": null, "lng": null, "dolda_parlan": null, "tags": [], "pris": "€€", "besokstips": "", "webbplats": null, "oppettider": null, "bokning_rekommenderas": false } ] },
+    "shopping": { "rubrik": "Shopping & marknader", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": null, "lng": null, "dolda_parlan": null, "tags": [], "pris": "€€", "besokstips": "", "webbplats": null, "oppettider": null, "bokning_rekommenderas": false } ] },
+    "boende": { "rubrik": "Boende & hotell", "intro": "3-4 meningar", "tips": [ { "namn": "", "beskrivning": "", "adress": "", "lat": null, "lng": null, "dolda_parlan": null, "tags": [], "pris": "€€", "besokstips": "", "webbplats": null, "oppettider": null, "bokning_rekommenderas": false } ] }
   }
 }
 
-DOLDA PÄRLOR: Sätt "dolda_parlan" till null för de flesta tips. Fyll i det BARA för max 2 verkliga gömda pärlor per kategori — platser lokalbor älskar men turister sällan hittar. Skicka faktisk null (inte tom sträng) för övriga.
-KOORDINATER — KRITISKT: Varje tips MÅSTE ha exakta lat/lng som pekar på platsens faktiska ingång eller mitt. Koordinaterna används för att placera en pin på kartan — 100 meter fel syns direkt. Ange aldrig 0.0 eller ungefärliga koordinater. Kontrollera att koordinaterna faktiskt stämmer med adressen.
-Inkludera 6-8 tips per sektion. Skriv på svenska. Var konkret och personlig — visa tydligt hur varje tips kopplar till resenärens preferenser.`
+DOLDA PÄRLOR: "dolda_parlan" är null för alla tips utom max 2 verkliga gömda pärlor per kategori — platser lokalbor älskar men turister sällan hittar. null (inte tom sträng) för övriga.
+KOORDINATER: Om du inte med hög säkerhet vet exakta koordinater, sätt lat och lng till null. Det är ALLTID bättre att returnera null än att gissa — en felaktig pin på kartan är värre än ingen pin. Ange aldrig 0.0.
+TAGS: välj max 4 relevanta taggar från listan: ${TAGS_LIST}
+WEBBPLATS: officiell hemsida eller Instagram-handle (@...). INTE TripAdvisor, Google Maps eller bokningssajter. null om osäker.
+PRIS: använd exakt ett av dessa värden: "€", "€€", "€€€", "€€€€" eller null om inte relevant.
+ANTAL TIPS: inkludera 4-8 tips per sektion beroende på vad destinationen faktiskt erbjuder — tvinga inte fram tips som inte håller måttet.
+Skriv på svenska. Var konkret och personlig — visa tydligt hur varje tips kopplar till resenärens preferenser.`
 }
 
 destinationsRouter.get('/', async (req, res, next) => {
