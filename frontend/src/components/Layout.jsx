@@ -9,7 +9,7 @@ export default function Layout() {
     <div className="flex flex-col min-h-screen">
       <header className="bg-white border-b border-slate-100 shadow-sm px-4 py-3 flex items-center gap-2">
         <span className="text-xl">✈️</span>
-        <span className="text-lg font-bold tracking-tight text-slate-900">Min Resa</span>
+        <span className="text-lg font-bold tracking-tight text-slate-900">Mina Resmål</span>
         <span className="flex-1" />
         <button
           onClick={logout}

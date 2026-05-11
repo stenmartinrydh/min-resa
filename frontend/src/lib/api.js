@@ -7,6 +7,8 @@ function waitForUser() {
     const auth = getAuth()
     if (auth.currentUser) return resolve(auth.currentUser)
     const unsub = onAuthStateChanged(auth, (user) => { unsub(); resolve(user) })
+    // Resolve with null after 5s if Firebase never fires
+    setTimeout(() => { unsub(); resolve(null) }, 5000)
   })
 }
 
@@ -29,27 +31,28 @@ async function handleResponse(res) {
   return text ? JSON.parse(text) : null
 }
 
+async function request(method, path, body) {
+  const url = `${BASE}${path}`
+  const start = Date.now()
+  console.log(`[api] ${method} ${path}`)
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: await headers(),
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+    })
+    const data = await handleResponse(res)
+    console.log(`[api] ${method} ${path} → ${res.status} (${Date.now() - start}ms)`)
+    return data
+  } catch (err) {
+    console.error(`[api] ${method} ${path} → FEL (${Date.now() - start}ms):`, err.message)
+    throw err
+  }
+}
+
 export const api = {
-  get: async (path) =>
-    fetch(`${BASE}${path}`, { headers: await headers() }).then(handleResponse),
-
-  post: async (path, body) =>
-    fetch(`${BASE}${path}`, {
-      method: 'POST',
-      headers: await headers(),
-      body: JSON.stringify(body),
-    }).then(handleResponse),
-
-  put: async (path, body) =>
-    fetch(`${BASE}${path}`, {
-      method: 'PUT',
-      headers: await headers(),
-      body: JSON.stringify(body),
-    }).then(handleResponse),
-
-  delete: async (path) =>
-    fetch(`${BASE}${path}`, {
-      method: 'DELETE',
-      headers: await headers(),
-    }).then(handleResponse),
+  get: (path) => request('GET', path),
+  post: (path, body) => request('POST', path, body),
+  put: (path, body) => request('PUT', path, body),
+  delete: (path) => request('DELETE', path),
 }

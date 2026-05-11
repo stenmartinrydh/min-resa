@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { authenticate } from './middleware/auth.js'
+import { requestLogger } from './middleware/logger.js'
 import { preferencesRouter } from './routes/preferences.js'
 import { destinationsRouter } from './routes/destinations.js'
 
@@ -17,10 +18,14 @@ const allowedOrigins = [
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) cb(null, true)
-    else cb(new Error(`CORS: ${origin} not allowed`))
+    else {
+      console.warn(`[CORS] Blocked origin: ${origin}`)
+      cb(new Error(`CORS: ${origin} not allowed`))
+    }
   },
 }))
 app.use(express.json())
+app.use(requestLogger)
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }))
 
@@ -28,8 +33,13 @@ app.use('/api/preferences', authenticate, preferencesRouter)
 app.use('/api/destinations', authenticate, destinationsRouter)
 
 app.use((err, req, res, next) => {
-  console.error(err)
-  res.status(err.status || 500).json({ error: err.message || 'Internal server error' })
+  const status = err.status || 500
+  console.error(`[ERROR] ${err.message}`)
+  if (status >= 500) console.error(err.stack)
+  res.status(status).json({ error: err.message || 'Internal server error' })
 })
 
-app.listen(PORT, () => console.log(`min-resa backend running on port ${PORT}`))
+app.listen(PORT, () => {
+  console.log(`\n[min-resa] Backend startar på port ${PORT}`)
+  console.log(`[min-resa] Tillåtna origins: ${allowedOrigins.join(', ')}\n`)
+})

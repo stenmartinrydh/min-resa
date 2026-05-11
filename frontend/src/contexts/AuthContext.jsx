@@ -18,6 +18,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let prevUid = null
     const unsubscribe = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        console.log(`[auth] Inloggad: ${u.email} (uid: ${u.uid})`)
+      } else {
+        console.log('[auth] Utloggad')
+      }
       if (u?.uid !== prevUid) queryClient.clear()
       prevUid = u?.uid ?? null
       setUser(u)
